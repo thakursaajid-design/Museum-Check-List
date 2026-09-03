@@ -108,6 +108,12 @@
     .summary-card.fail .label { color: #ffeaea; }
     .summary-card.issues { background: var(--notresp); color: #1a1400; }
     .summary-card.issues .label { color: #5a3a00; }
+    .summary-card.today-issues {
+      background: linear-gradient(135deg, #FFC000, #FFD84D);
+      color: #1a1400;
+      border: 2px solid #FFA500;
+    }
+    .summary-card.today-issues .label { color: #5a3a00; }
     .legend {
       display: flex; flex-wrap: wrap;
       gap: 0.14rem 0.5rem;
@@ -151,6 +157,15 @@
       z-index: 10;
       font-size: 0.62rem;
     }
+    /* Highlight today's column */
+    th.today-col, td.today-col {
+      background: rgba(59, 158, 255, 0.12) !important;
+    }
+    th.today-col {
+      background: rgba(59, 158, 255, 0.25) !important;
+      border-top: 2px solid var(--accent);
+      border-bottom: 2px solid var(--accent);
+    }
     th:nth-child(1), td:nth-child(1) {
       position: sticky; left: 0; z-index: 6;
       background: var(--card); text-align: left;
@@ -189,17 +204,111 @@
       .meta { font-size: 0.52rem; }
       .tabs { width: 100%; }
       .tab { padding: 0.16rem 0.4rem; font-size: 0.64rem; }
-      .summary { gap: 0.14rem; }
-      .summary-card { padding: 0.06rem 0.2rem; }
+      .summary { gap: 0.14rem; flex-wrap: wrap; }
+      .summary-card { padding: 0.06rem 0.2rem; min-width: 30%; }
       .summary-card .label { font-size: 0.44rem; }
       .summary-card .value { font-size: 0.74rem; }
       .legend { font-size: 0.52rem; gap: 0.1rem 0.38rem; }
       th, td { padding: 0.1rem 0.1rem; font-size: 0.58rem; min-width: 18px; }
       th:nth-child(3), td:nth-child(3) { min-width: 30px; max-width: 34px; }
     }
+    /* Login styles */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .login-logo .logo-large {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .login-logo h2 {
+      font-size: 1.2rem;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+    .login-logo p {
+      color: var(--muted);
+      font-size: 0.7rem;
+      margin-bottom: 0.5rem;
+    }
+    .login-input {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 0.38rem;
+      background: #0d1522;
+      color: var(--text);
+      font-size: 0.75rem;
+      outline: none;
+    }
+    .login-input:focus {
+      border-color: var(--accent);
+    }
+    .login-btn {
+      width: 100%;
+      padding: 0.55rem;
+      background: var(--accent);
+      border: none;
+      border-radius: 0.38rem;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .login-btn:hover {
+      opacity: 0.9;
+    }
+    .login-error {
+      color: #fca5a5;
+      font-size: 0.65rem;
+      margin-top: 0.4rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <!-- Login Overlay -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-large">🏛️</div>
+        <h2>KAUST Museum</h2>
+        <h3 style="font-size:0.9rem; margin-bottom:0.2rem;">Check List</h3>
+        <p>More interesting technical information there.</p>
+        <p style="color:var(--muted); font-size:0.65rem; word-break:break-all;">📧 thakursaajid@gmail.com</p>
+      </div>
+      <form id="login-form">
+        <input type="text" class="login-input" id="login-user" placeholder="Username" required>
+        <input type="text" class="login-input" id="login-pass" placeholder="KAUST ID" required>
+        <button type="submit" class="login-btn">🔒 Login</button>
+        <div class="login-error" id="login-error"></div>
+      </form>
+    </div>
+  </div>
+
   <header>
     <div class="header-inner">
       <div class="brand">
@@ -233,6 +342,30 @@
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     let data = null;
     let currentSheet = null;
+    let isLoggedIn = false;
+
+    // Login handling
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    
+    // User credentials - modify these values as needed
+    const VALID_USER = 'Thakur_Saajid';  // Username
+    const VALID_PASS = '105475';         // KAUST ID
+
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const user = document.getElementById('login-user').value.trim();
+      const pass = document.getElementById('login-pass').value.trim();
+      
+      if (user === VALID_USER && pass === VALID_PASS) {
+        isLoggedIn = true;
+        document.getElementById('login-overlay').style.display = 'none';
+        // Start loading data after login
+        start();
+      } else {
+        loginError.textContent = 'Invalid Username or KAUST ID';
+      }
+    });
 
     function escapeHtml(str) {
       if (str == null) return '';
@@ -280,7 +413,7 @@
       if (p.g > p.r + 15 && p.g > p.b + 15 && p.g > 90) return 'ok';
       if (p.r > 180 && p.g < 90 && p.b < 90) return 'failed';
       if (p.b > 180 && p.g > 140 && p.r < 90) return 'hang';
-      if (p.b > 140 && p.r < 90 && p.g < 140) return 'flicker';
+      if (p.b > 100 && p.b <= 180 && p.r < 90 && p.g < 140) return 'flicker';
       if (p.r > 160 && p.g > 50 && p.g < 210 && p.b < 90) return 'notresp';
       return null;
     }
@@ -419,7 +552,9 @@
     }
 
     function countStatuses(sheet) {
-      const counts = { ok: 0, failed: 0, hang: 0, flicker: 0, notresp: 0, total: 0 };
+      const counts = { ok: 0, failed: 0, hang: 0, flicker: 0, notresp: 0, total: 0, todayIssues: 0 };
+      const today = new Date().getDate();
+      
       sheet.rows.forEach(row => {
         if (row.is_results) {
           row.cells.forEach((cell, idx) => {
@@ -436,6 +571,11 @@
           else if (k === 'hang') counts.hang++;
           else if (k === 'flicker') counts.flicker++;
           else if (k === 'notresp') counts.notresp++;
+          
+          const colDate = idx - 2;
+          if (colDate === today && (k === 'failed' || k === 'hang' || k === 'flicker' || k === 'notresp')) {
+            counts.todayIssues++;
+          }
         });
       });
       return counts;
@@ -453,6 +593,7 @@
       document.getElementById('summary').innerHTML =
         card('', 'Exhibits', c.total) +
         card('', 'Days', days) +
+        card('today-issues', 'Today Issues', c.todayIssues) +
         card('ok', 'OK', c.ok) +
         card('fail', 'Failed', c.failed) +
         card('issues', 'Issues', c.hang + c.flicker + c.notresp);
@@ -469,17 +610,24 @@
       if (!sheet) return;
       currentSheet = sheetName;
       renderSummary(sheetName);
+      
+      const today = new Date().getDate();
+      
       let html = '<div class="table-scroll"><table><thead><tr>';
       sheet.headers.forEach((h, idx) => {
         const style = h.fill ? 'background:' + h.fill + ';color:#111;font-weight:700;' : '';
-        html += '<th style="' + style + '">' + escapeHtml(headerLabel(h, idx)) + '</th>';
+        const isToday = idx >= 3 && idx - 2 === today;
+        const todayClass = isToday ? ' class="today-col"' : '';
+        html += '<th' + todayClass + ' style="' + style + '">' + escapeHtml(headerLabel(h, idx)) + '</th>';
       });
       html += '</tr></thead><tbody>';
       sheet.rows.forEach(row => {
         html += '<tr' + (row.is_results ? ' class="results-row"' : '') + '>';
-        row.cells.forEach(cell => {
+        row.cells.forEach((cell, idx) => {
           const style = cell.fill ? 'background:' + cell.fill + ';color:#111;font-weight:600;' : '';
-          html += '<td style="' + style + '">' + escapeHtml(cell.value) + '</td>';
+          const isToday = idx >= 3 && idx - 2 === today;
+          const todayClass = isToday ? ' class="today-col"' : '';
+          html += '<td' + todayClass + ' style="' + style + '">' + escapeHtml(cell.value) + '</td>';
         });
         html += '</tr>';
       });
@@ -565,7 +713,9 @@
         document.getElementById('last-updated').textContent = 'Failed to load';
       }
     }
-    start();
+    
+    // Don't auto-start - wait for login
+    // start();
   </script>
 </body>
 </html>
