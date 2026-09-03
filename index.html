@@ -157,7 +157,6 @@
       z-index: 10;
       font-size: 0.62rem;
     }
-    /* Highlight today's column */
     th.today-col, td.today-col {
       background: rgba(59, 158, 255, 0.12) !important;
     }
@@ -301,7 +300,6 @@
         <p style="color:var(--muted); font-size:0.65rem; word-break:break-all;">📧 thakursaajid@gmail.com</p>
       </div>
       <form id="login-form">
-        <!-- Username already filled and always visible -->
         <input type="text" class="login-input" id="login-user" value="Thakur_Saajid" readonly style="opacity:0.7; cursor:not-allowed;">
         <input type="text" class="login-input" id="login-pass" placeholder="KAUST ID" required autofocus>
         <button type="submit" class="login-btn">🔒 Login</button>
@@ -338,7 +336,6 @@
   </main>
 
   <script>
-    const FILE_URL = 'Museum_Check_List.xlsx';
     const FROM_LABEL = 'thakursaajid@gmail.com';
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     let data = null;
@@ -349,9 +346,8 @@
     const loginForm = document.getElementById('login-form');
     const loginError = document.getElementById('login-error');
     
-    // User credentials - KAUST ID
-    const VALID_USER = 'Thakur_Saajid';  // Username (already shown)
-    const VALID_PASS = '105475';         // KAUST ID
+    const VALID_USER = 'Thakur_Saajid';
+    const VALID_PASS = '105475';
 
     loginForm.addEventListener('submit', function(e) {
       e.preventDefault();
@@ -361,7 +357,6 @@
       if (user === VALID_USER && pass === VALID_PASS) {
         isLoggedIn = true;
         document.getElementById('login-overlay').style.display = 'none';
-        // START LOADING DATA AFTER LOGIN
         start();
       } else {
         loginError.textContent = 'Invalid KAUST ID';
@@ -522,36 +517,50 @@
       return { headers, rows };
     }
 
-    async function loadExcel() {
-      const resp = await fetch(FILE_URL + '?t=' + Date.now());
-      if (!resp.ok) throw new Error('Could not load Excel file');
-      const buf = await resp.arrayBuffer();
-      const zip = await JSZip.loadAsync(buf);
-      const wbXml = await zip.file('xl/workbook.xml').async('string');
-      const relsXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
-      const stylesXml = await zip.file('xl/styles.xml').async('string');
-      const ssFile = zip.file('xl/sharedStrings.xml');
-      const shared = ssFile ? parseSharedStrings(await ssFile.async('string')) : [];
-      const xfs = parseFills(stylesXml);
-      const relDoc = new DOMParser().parseFromString(relsXml, 'application/xml');
-      const relMap = {};
-      const rels = nsTag(relDoc, 'Relationship');
-      for (let i = 0; i < rels.length; i++) {
-        relMap[rels[i].getAttribute('Id')] = rels[i].getAttribute('Target');
-      }
-      const wbDoc = new DOMParser().parseFromString(wbXml, 'application/xml');
-      const sheets = nsTag(wbDoc, 'sheet');
-      const result = {};
-      for (let i = 0; i < sheets.length; i++) {
-        const name = sheets[i].getAttribute('name');
-        const rid = sheets[i].getAttribute('r:id') || sheets[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
-        let target = relMap[rid];
-        if (!target) continue;
-        if (target.startsWith('/')) target = target.slice(1);
-        if (!target.startsWith('xl/')) target = 'xl/' + target.replace(/^\/?/, '');
-        result[name] = sheetToView(parseSheet(await zip.file(target).async('string'), shared, xfs));
-      }
-      return { result, lastMod: resp.headers.get('Last-Modified') };
+    // ============ GOOGLE APPS SCRIPT ONLY ============
+    async function loadFromGoogle(url) {
+      try {
+        const resp = await fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now());
+        if (resp.ok) {
+          const json = await resp.json();
+          return { result: json.sheets || json, lastMod: json.lastUpdated || null };
+        }
+      } catch (e) {}
+      // Fallback to JSONP
+      const json = await loadJsonp(url);
+      return { result: json.sheets || json, lastMod: json.lastUpdated || null };
+    }
+
+    function loadJsonp(url) {
+      return new Promise((resolve, reject) => {
+        const cbName = 'checklistCb_' + Date.now();
+        const timer = setTimeout(() => reject(new Error('Google Sheets timeout')), 20000);
+        window[cbName] = function (json) {
+          clearTimeout(timer);
+          delete window[cbName];
+          script.remove();
+          resolve(json);
+        };
+        const script = document.createElement('script');
+        script.onerror = function () {
+          clearTimeout(timer);
+          reject(new Error('Failed to load data'));
+        };
+        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+        document.body.appendChild(script);
+      });
+    }
+
+    function pickDefaultSheet(names) {
+      if (currentSheet && names.indexOf(currentSheet) >= 0) return currentSheet;
+      const now = MONTHS[new Date().getMonth()];
+      return names.find(n => n.toLowerCase() === now.toLowerCase()) || names[0];
+    }
+
+    function setMeta(lastMod) {
+      const d = lastMod ? new Date(lastMod) : new Date();
+      const when = isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString();
+      document.getElementById('last-updated').textContent = 'From ' + FROM_LABEL + ' • ' + when;
     }
 
     function countStatuses(sheet) {
@@ -641,55 +650,13 @@
       });
     }
 
-    async function loadFromGoogle(url) {
-      try {
-        const resp = await fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now());
-        if (resp.ok) {
-          const json = await resp.json();
-          return { result: json.sheets || json, lastMod: json.lastUpdated || null };
-        }
-      } catch (e) {}
-      const json = await loadJsonp(url);
-      return { result: json.sheets || json, lastMod: json.lastUpdated || null };
-    }
-
-    function loadJsonp(url) {
-      return new Promise((resolve, reject) => {
-        const cbName = 'checklistCb_' + Date.now();
-        const timer = setTimeout(() => reject(new Error('Google Sheets timeout')), 20000);
-        window[cbName] = function (json) {
-          clearTimeout(timer);
-          delete window[cbName];
-          script.remove();
-          resolve(json);
-        };
-        const script = document.createElement('script');
-        script.onerror = function () {
-          clearTimeout(timer);
-          reject(new Error('Failed to load data'));
-        };
-        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
-        document.body.appendChild(script);
-      });
-    }
-
-    function pickDefaultSheet(names) {
-      if (currentSheet && names.indexOf(currentSheet) >= 0) return currentSheet;
-      const now = MONTHS[new Date().getMonth()];
-      return names.find(n => n.toLowerCase() === now.toLowerCase()) || names[0];
-    }
-
-    function setMeta(lastMod) {
-      const d = lastMod ? new Date(lastMod) : new Date();
-      const when = isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString();
-      document.getElementById('last-updated').textContent = 'From ' + FROM_LABEL + ' • ' + when;
-    }
-
     async function loadAll() {
       const googleUrl = (window.CHECKLIST_CONFIG && window.CHECKLIST_CONFIG.googleScriptUrl || '').trim();
       let result, lastMod;
-      if (googleUrl) ({ result, lastMod } = await loadFromGoogle(googleUrl));
-      else ({ result, lastMod } = await loadExcel());
+      
+      // Only load from Google Apps Script (NO Excel file)
+      ({ result, lastMod } = await loadFromGoogle(googleUrl));
+      
       data = result;
       setMeta(lastMod);
       const names = Object.keys(data);
@@ -716,9 +683,7 @@
         document.getElementById('last-updated').textContent = 'Failed to load';
       }
     }
-    
-    // Don't auto-start - wait for login
-    // start();
+    // start() will be called only after login
   </script>
 </body>
 </html>
