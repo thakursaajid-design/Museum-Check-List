@@ -1,4 +1,6 @@
-// Google Apps Script web app URL
-window.CHECKLIST_CONFIG = {
-  googleScriptUrl: "https://script.google.com/macros/s/AKfycby0t811kvzxflOYesq5GcRL54X1yF0epRf6_YoBdytUb8Fue0SKrsboBeAlvckOzWU/exec"
-};
+if (user === VALID_USER && pass === VALID_PASS) {
+  isLoggedIn = true;
+  document.getElementById('login-overlay').style.display = 'none';
+  // THIS LINE NOW STARTS THE DATA LOADING
+  start();  
+}
