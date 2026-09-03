@@ -157,6 +157,7 @@
       z-index: 10;
       font-size: 0.62rem;
     }
+    /* Highlight today's column */
     th.today-col, td.today-col {
       background: rgba(59, 158, 255, 0.12) !important;
     }
@@ -336,6 +337,7 @@
   </main>
 
   <script>
+    const FILE_URL = 'Museum_Check_List.xlsx';
     const FROM_LABEL = 'thakursaajid@gmail.com';
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     let data = null;
@@ -411,7 +413,7 @@
       if (p.g > p.r + 15 && p.g > p.b + 15 && p.g > 90) return 'ok';
       if (p.r > 180 && p.g < 90 && p.b < 90) return 'failed';
       if (p.b > 180 && p.g > 140 && p.r < 90) return 'hang';
-      if (p.b > 100 && p.b <= 180 && p.r < 90 && p.g < 140) return 'flicker';
+      if (p.b > 140 && p.r < 90 && p.g < 140) return 'flicker';
       if (p.r > 160 && p.g > 50 && p.g < 210 && p.b < 90) return 'notresp';
       return null;
     }
@@ -517,50 +519,36 @@
       return { headers, rows };
     }
 
-    // ============ GOOGLE APPS SCRIPT ONLY ============
-    async function loadFromGoogle(url) {
-      try {
-        const resp = await fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now());
-        if (resp.ok) {
-          const json = await resp.json();
-          return { result: json.sheets || json, lastMod: json.lastUpdated || null };
-        }
-      } catch (e) {}
-      // Fallback to JSONP
-      const json = await loadJsonp(url);
-      return { result: json.sheets || json, lastMod: json.lastUpdated || null };
-    }
-
-    function loadJsonp(url) {
-      return new Promise((resolve, reject) => {
-        const cbName = 'checklistCb_' + Date.now();
-        const timer = setTimeout(() => reject(new Error('Google Sheets timeout')), 20000);
-        window[cbName] = function (json) {
-          clearTimeout(timer);
-          delete window[cbName];
-          script.remove();
-          resolve(json);
-        };
-        const script = document.createElement('script');
-        script.onerror = function () {
-          clearTimeout(timer);
-          reject(new Error('Failed to load data'));
-        };
-        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
-        document.body.appendChild(script);
-      });
-    }
-
-    function pickDefaultSheet(names) {
-      if (currentSheet && names.indexOf(currentSheet) >= 0) return currentSheet;
-      const now = MONTHS[new Date().getMonth()];
-      return names.find(n => n.toLowerCase() === now.toLowerCase()) || names[0];
-    }
-
-    function setMeta(lastMod) {
-      const d = lastMod ? new Date(lastMod) : new Date();
-      const when = isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString();
-      document.getElementById('last-updated').textContent = 'From ' + FROM_LABEL + ' • ' + when;
+    async function loadExcel() {
+      const resp = await fetch(FILE_URL + '?t=' + Date.now());
+      if (!resp.ok) throw new Error('Could not load Excel file');
+      const buf = await resp.arrayBuffer();
+      const zip = await JSZip.loadAsync(buf);
+      const wbXml = await zip.file('xl/workbook.xml').async('string');
+      const relsXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+      const stylesXml = await zip.file('xl/styles.xml').async('string');
+      const ssFile = zip.file('xl/sharedStrings.xml');
+      const shared = ssFile ? parseSharedStrings(await ssFile.async('string')) : [];
+      const xfs = parseFills(stylesXml);
+      const relDoc = new DOMParser().parseFromString(relsXml, 'application/xml');
+      const relMap = {};
+      const rels = nsTag(relDoc, 'Relationship');
+      for (let i = 0; i < rels.length; i++) {
+        relMap[rels[i].getAttribute('Id')] = rels[i].getAttribute('Target');
+      }
+      const wbDoc = new DOMParser().parseFromString(wbXml, 'application/xml');
+      const sheets = nsTag(wbDoc, 'sheet');
+      const result = {};
+      for (let i = 0; i < sheets.length; i++) {
+        const name = sheets[i].getAttribute('name');
+        const rid = sheets[i].getAttribute('r:id') || sheets[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+        let target = relMap[rid];
+        if (!target) continue;
+        if (target.startsWith('/')) target = target.slice(1);
+        if (!target.startsWith('xl/')) target = 'xl/' + target.replace(/^\/?/, '');
+        result[name] = sheetToView(parseSheet(await zip.file(target).async('string'), shared, xfs));
+      }
+      return { result, lastMod: resp.headers.get('Last-Modified') };
     }
 
     function countStatuses(sheet) {
@@ -650,13 +638,55 @@
       });
     }
 
+    async function loadFromGoogle(url) {
+      try {
+        const resp = await fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now());
+        if (resp.ok) {
+          const json = await resp.json();
+          return { result: json.sheets || json, lastMod: json.lastUpdated || null };
+        }
+      } catch (e) {}
+      const json = await loadJsonp(url);
+      return { result: json.sheets || json, lastMod: json.lastUpdated || null };
+    }
+
+    function loadJsonp(url) {
+      return new Promise((resolve, reject) => {
+        const cbName = 'checklistCb_' + Date.now();
+        const timer = setTimeout(() => reject(new Error('Google Sheets timeout')), 20000);
+        window[cbName] = function (json) {
+          clearTimeout(timer);
+          delete window[cbName];
+          script.remove();
+          resolve(json);
+        };
+        const script = document.createElement('script');
+        script.onerror = function () {
+          clearTimeout(timer);
+          reject(new Error('Failed to load data'));
+        };
+        script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+        document.body.appendChild(script);
+      });
+    }
+
+    function pickDefaultSheet(names) {
+      if (currentSheet && names.indexOf(currentSheet) >= 0) return currentSheet;
+      const now = MONTHS[new Date().getMonth()];
+      return names.find(n => n.toLowerCase() === now.toLowerCase()) || names[0];
+    }
+
+    function setMeta(lastMod) {
+      const d = lastMod ? new Date(lastMod) : new Date();
+      const when = isNaN(d.getTime()) ? new Date().toLocaleString() : d.toLocaleString();
+      document.getElementById('last-updated').textContent = 'From ' + FROM_LABEL + ' • ' + when;
+    }
+
     async function loadAll() {
       const googleUrl = (window.CHECKLIST_CONFIG && window.CHECKLIST_CONFIG.googleScriptUrl || '').trim();
       let result, lastMod;
-      
-      // Only load from Google Apps Script (NO Excel file)
-      ({ result, lastMod } = await loadFromGoogle(googleUrl));
-      
+      if (googleUrl) ({ result, lastMod } = await loadFromGoogle(googleUrl));
+      else ({ result, lastMod } = await loadExcel());
       data = result;
       setMeta(lastMod);
       const names = Object.keys(data);
@@ -683,7 +713,8 @@
         document.getElementById('last-updated').textContent = 'Failed to load';
       }
     }
-    // start() will be called only after login
+    // Do NOT auto-start - wait for login
+    // start();
   </script>
 </body>
 </html>
