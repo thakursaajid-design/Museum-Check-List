@@ -157,14 +157,15 @@
       z-index: 10;
       font-size: 0.62rem;
     }
-    /* Highlight today's column */
-    th.today-col, td.today-col {
-      background: rgba(59, 158, 255, 0.12) !important;
-    }
+    /* Highlight today's column - ONLY border, no background override */
     th.today-col {
-      background: rgba(59, 158, 255, 0.25) !important;
-      border-top: 2px solid var(--accent);
-      border-bottom: 2px solid var(--accent);
+      border-top: 3px solid var(--accent);
+      border-bottom: 3px solid var(--accent);
+      box-shadow: inset 0 0 0 1px var(--accent);
+    }
+    td.today-col {
+      border-top: 1px solid rgba(59, 158, 255, 0.4);
+      border-bottom: 1px solid rgba(59, 158, 255, 0.4);
     }
     th:nth-child(1), td:nth-child(1) {
       position: sticky; left: 0; z-index: 6;
@@ -615,6 +616,7 @@
       
       let html = '<div class="table-scroll"><table><thead><tr>';
       sheet.headers.forEach((h, idx) => {
+        // Preserve Excel background color
         const style = h.fill ? 'background:' + h.fill + ';color:#111;font-weight:700;' : '';
         const isToday = idx >= 3 && idx - 2 === today;
         const todayClass = isToday ? ' class="today-col"' : '';
@@ -624,6 +626,7 @@
       sheet.rows.forEach(row => {
         html += '<tr' + (row.is_results ? ' class="results-row"' : '') + '>';
         row.cells.forEach((cell, idx) => {
+          // Preserve Excel background color
           const style = cell.fill ? 'background:' + cell.fill + ';color:#111;font-weight:600;' : '';
           const isToday = idx >= 3 && idx - 2 === today;
           const todayClass = isToday ? ' class="today-col"' : '';
