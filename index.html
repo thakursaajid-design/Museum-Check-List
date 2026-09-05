@@ -28,7 +28,6 @@
       color: var(--text);
       height: 100dvh; 
       padding-bottom: 20px; 
-      touch-action: pan-x pan-y;
     }
     header {
       background: #101827;
@@ -85,6 +84,8 @@
       flex-direction: column;
       height: calc(100dvh - 48px);
     }
+    
+    /* Summary Layout - Number FIRST, Label SECOND, inline */
     .summary {
       display: flex;
       gap: 0.2rem;
@@ -94,23 +95,27 @@
     .summary-card {
       flex: 1;
       border-radius: 0.35rem;
-      padding: 0.2rem 0.4rem;
+      padding: 0.15rem 0.6rem;
       min-width: 0;
       background: var(--card);
-      line-height: 1.1;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      line-height: 1;
     }
+    .summary-card .value { font-size: 1.3rem; font-weight: 800; }
     .summary-card .label {
-      font-size: 0.6rem; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.05em;
-      font-weight: 700;
+      font-size: 0.65rem; 
+      font-weight: 800; 
+      text-transform: uppercase; 
+      letter-spacing: 0.03em;
+      color: #111;
     }
-    .summary-card .value { font-size: 1.1rem; font-weight: 800; }
+    
+    /* Card colors */
     .summary-card.ok { background: var(--ok); color: #fff; }
-    .summary-card.ok .label { color: #e9ffe9; }
     .summary-card.fail { background: var(--fail); color: #fff; }
-    .summary-card.fail .label { color: #ffeaea; }
     .summary-card.issues { background: var(--notresp); color: #1a1400; }
-    .summary-card.issues .label { color: #5a3a00; }
     .summary-card.today-issues {
       background: linear-gradient(135deg, #D8BFD8, #E6E6FA); 
       color: #2d1b69;
@@ -132,7 +137,7 @@
       gap: 0.2rem 0.7rem;
       font-size: 0.72rem;
       color: var(--muted);
-      font-weight: 700;
+      font-weight: 800;
     }
     .legend-item { display: flex; align-items: center; gap: 0.25rem; }
     .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
@@ -168,7 +173,6 @@
       width: 100%; 
       -webkit-overflow-scrolling: touch; 
       padding-bottom: 20px; 
-      touch-action: pan-x pan-y;
     }
     table {
       width: max-content;
@@ -242,10 +246,10 @@
       .meta { font-size: 0.58rem; }
       .tabs { width: 100%; }
       .tab { padding: 0.2rem 0.5rem; font-size: 0.72rem; }
-      .summary { gap: 0.15rem; flex-wrap: wrap; }
-      .summary-card { padding: 0.1rem 0.2rem; min-width: 30%; }
+      .summary { gap: 0.15rem; }
+      .summary-card { padding: 0.1rem 0.3rem; }
+      .summary-card .value { font-size: 1rem; }
       .summary-card .label { font-size: 0.5rem; }
-      .summary-card .value { font-size: 0.9rem; }
       .legend-refresh-row { gap: 0.3rem; }
       .legend { font-size: 0.62rem; gap: 0.15rem 0.4rem; }
       .dot { width: 10px; height: 10px; }
@@ -368,7 +372,7 @@
   <main>
     <div class="summary" id="summary"></div>
     
-    <!-- Legend & Refresh Row (replaces Download button) -->
+    <!-- Legend & Refresh Row -->
     <div class="legend-refresh-row">
       <div class="legend">
         <div class="legend-item"><span class="dot" style="background:#FFC000"></span> Not Respond</div>
@@ -619,7 +623,7 @@
     }
 
     function card(cls, label, value) {
-      return '<div class="summary-card ' + cls + '"><div class="label">' + label + '</div><div class="value">' + value + '</div></div>';
+      return '<div class="summary-card ' + cls + '"><div class="value">' + value + '</div><div class="label">' + label + '</div></div>';
     }
 
     function renderSummary(sheetName) {
@@ -627,11 +631,11 @@
       const c = countStatuses(sheet);
       const days = Math.max(0, (sheet.headers.length || 3) - 3);
       document.getElementById('summary').innerHTML =
-        card('', 'Exhibits', c.total) +
-        card('', 'Days', days) +
-        card('today-issues', 'Today Issues', c.todayIssues) +
+        card('', 'EXHIBITS', c.total) +
+        card('', 'DAYS', days) +
+        card('today-issues', 'TODAY ISSUES', c.todayIssues) +
         card('ok', 'OK', c.ok) +
-        card('fail', 'Failed', c.failed) +
+        card('fail', 'FAILED', c.failed) +
         card('issues', 'TOTAL ISSUES', c.hang + c.flicker + c.notresp);
     }
 
