@@ -29,15 +29,13 @@
       background: var(--bg);
       color: var(--text);
       height: 100vh;
-      height: 100svh; /* Small Viewport Height - fixes mobile cut-off */
       overflow: hidden;
-      padding-bottom: env(safe-area-inset-bottom); /* Safe area for iPhones */
     }
     header {
       background: #101827;
       border-bottom: 1px solid var(--border);
       padding: 0.22rem 0.5rem;
-      padding-top: calc(0.22rem + env(safe-area-inset-top)); /* For notches */
+      padding-top: calc(0.22rem + env(safe-area-inset-top)); 
     }
     .header-inner {
       max-width: 1760px;
@@ -83,11 +81,11 @@
     main {
       max-width: 1760px;
       margin: 0 auto;
-      padding: 0.22rem 0.5rem calc(0.8rem + env(safe-area-inset-bottom));
+      padding: 0.22rem 0.5rem 0.28rem;
       display: flex;
       flex-direction: column;
       height: calc(100vh - 44px);
-      height: calc(100svh - 44px);
+      padding-bottom: 30px; /* EXTRA PADDING FOR MOBILE BAR */
     }
     .summary {
       display: flex;
@@ -115,7 +113,7 @@
     .summary-card.issues { background: var(--notresp); color: #1a1400; }
     .summary-card.issues .label { color: #5a3a00; }
     .summary-card.today-issues {
-      background: linear-gradient(135deg, #D8BFD8, #E6E6FA); /* Light Purple / Lavender */
+      background: linear-gradient(135deg, #D8BFD8, #E6E6FA); 
       color: #2d1b69;
       border: 2px solid #A855F7;
     }
@@ -163,7 +161,6 @@
       z-index: 10;
       font-size: 0.62rem;
     }
-    /* Highlight today's column - ONLY border, no background override */
     th.today-col {
       border-top: 3px solid var(--accent);
       border-bottom: 3px solid var(--accent);
@@ -205,7 +202,7 @@
     @media (max-width: 700px) {
       :root { --col-no: 22px; --col-ex: 92px; }
       header { padding: 0.16rem 0.28rem; padding-top: calc(0.16rem + env(safe-area-inset-top)); }
-      main { padding: 0.16rem 0.28rem calc(0.6rem + env(safe-area-inset-bottom)); height: calc(100svh - 38px); }
+      main { padding: 0.16rem 0.28rem 0.2rem; height: calc(100vh - 38px); }
       h1 { font-size: 0.8rem; }
       .logo { width: 20px; height: 20px; font-size: 0.7rem; }
       .meta { font-size: 0.52rem; }
@@ -350,7 +347,6 @@
     let currentSheet = null;
     let isLoggedIn = false;
 
-    // Login handling
     const loginForm = document.getElementById('login-form');
     const loginError = document.getElementById('login-error');
     
@@ -375,11 +371,7 @@
 
     function escapeHtml(str) {
       if (str == null) return '';
-      return String(str)
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"');
+      return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"');
     }
 
     function nsTag(el, name) { return el.getElementsByTagNameNS('*', name); }
@@ -405,21 +397,17 @@
       let x = String(f || '').toUpperCase().replace('#', '');
       if (x.length === 8) x = x.slice(2);
       if (x.length !== 6) return null;
-      return {
-        r: parseInt(x.slice(0, 2), 16),
-        g: parseInt(x.slice(2, 4), 16),
-        b: parseInt(x.slice(4, 6), 16)
-      };
+      return { r: parseInt(x.slice(0, 2), 16), g: parseInt(x.slice(2, 4), 16), b: parseInt(x.slice(4, 6), 16) };
     }
 
     function classifyFill(f) {
       const p = hexParts(f);
       if (!p) return null;
-      if (p.r > 200 && p.g > 200 && p.b < 90) return 'notresp'; // Yellow/Orange
-      if (p.b > 180 && p.g > 140 && p.r < 90) return 'hang'; // Light Blue
-      if (p.r > 180 && p.g < 90 && p.b > 180) return 'flicker'; // Magenta/Pink
-      if (p.r > 180 && p.g < 90 && p.b < 90) return 'failed'; // Red
-      if (p.g > p.r + 15 && p.g > p.b + 15 && p.g > 90) return 'ok'; // Green
+      if (p.r > 200 && p.g > 200 && p.b < 90) return 'notresp';
+      if (p.b > 180 && p.g > 140 && p.r < 90) return 'hang';
+      if (p.r > 180 && p.g < 90 && p.b > 180) return 'flicker';
+      if (p.r > 180 && p.g < 90 && p.b < 90) return 'failed';
+      if (p.g > p.r + 15 && p.g > p.b + 15 && p.g > 90) return 'ok';
       return null;
     }
 
@@ -559,7 +547,6 @@
     function countStatuses(sheet) {
       const counts = { ok: 0, failed: 0, hang: 0, flicker: 0, notresp: 0, total: 0, todayIssues: 0 };
       const today = new Date().getDate();
-      
       sheet.rows.forEach(row => {
         if (row.is_results) {
           row.cells.forEach((cell, idx) => {
@@ -576,7 +563,6 @@
           else if (k === 'hang') counts.hang++;
           else if (k === 'flicker') counts.flicker++;
           else if (k === 'notresp') counts.notresp++;
-          
           const colDate = idx - 2;
           if (colDate === today && (k === 'failed' || k === 'hang' || k === 'flicker' || k === 'notresp')) {
             counts.todayIssues++;
@@ -587,8 +573,7 @@
     }
 
     function card(cls, label, value) {
-      return '<div class="summary-card ' + cls + '"><div class="label">' + label +
-        '</div><div class="value">' + value + '</div></div>';
+      return '<div class="summary-card ' + cls + '"><div class="label">' + label + '</div><div class="value">' + value + '</div></div>';
     }
 
     function renderSummary(sheetName) {
@@ -615,9 +600,7 @@
       if (!sheet) return;
       currentSheet = sheetName;
       renderSummary(sheetName);
-      
       const today = new Date().getDate();
-      
       let html = '<div class="table-scroll"><table><thead><tr>';
       sheet.headers.forEach((h, idx) => {
         const style = h.fill ? 'background:' + h.fill + ';color:#111;font-weight:700;' : '';
@@ -718,7 +701,6 @@
         document.getElementById('last-updated').textContent = 'Failed to load';
       }
     }
-    // Do NOT auto-start - wait for login
     // start();
   </script>
 </body>
