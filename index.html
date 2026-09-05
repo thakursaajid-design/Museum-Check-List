@@ -425,7 +425,7 @@
         <div class="legend-item"><span class="dot" style="background:#00B050"></span> OK</div>
       </div>
       <div style="display:flex; gap: 0.3rem;">
-        <button class="download-btn" onclick="downloadCurrentData()">⬇️ Download Data</button>
+        <button class="download-btn" onclick="downloadCurrentData()">⬇️ Download</button>
         <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
       </div>
     </div>
@@ -466,7 +466,7 @@
     });
 
     // ==========================================
-    // DOWNLOAD DATA FUNCTION (Creates CSV file)
+    // DOWNLOAD AS REAL EXCEL FILE (WITH COLORS!)
     // ==========================================
     function downloadCurrentData() {
       if (!data) {
@@ -474,46 +474,155 @@
         return;
       }
       
-      let csvContent = "";
-      
-      // Iterate through all sheets/tabs
+      // Create workbook structure
+      const zip = new JSZip();
       const sheetNames = Object.keys(data);
-      for (let s = 0; s < sheetNames.length; s++) {
-        const sheetName = sheetNames[s];
-        const sheet = data[sheetName];
-        
-        csvContent += "\n\n=== SHEET: " + sheetName + " ===\n";
-        
-        // Headers
-        const headers = sheet.headers.map(h => h.value !== null ? h.value : "").join(",");
-        csvContent += headers + "\n";
-        
-        // Rows
-        for (let r = 0; r < sheet.rows.length; r++) {
-          const row = sheet.rows[r];
-          const rowData = row.cells.map(cell => {
-            let val = cell.value !== null ? cell.value : "";
-            // Escape commas and quotes for CSV
-            val = String(val).replace(/"/g, '""');
-            if (val.indexOf(",") > -1 || val.indexOf('"') > -1) {
-              val = '"' + val + '"';
-            }
-            return val;
-          }).join(",");
-          csvContent += rowData + "\n";
-        }
-      }
       
-      // Create Blob and download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", "Museum_Check_List_Data.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+</Types>`;
+
+      const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+      const workbook = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="${sheetNames[0]}" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>`;
+
+      const workbookRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+</Relationships>`;
+
+      // Build styles.xml (Colors)
+      const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fills count="6">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF00B050"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFF0000"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFFC000"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF00B0F0"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFF00FF"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <cellXfs count="7">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+    <xf numFmtId="0" fontId="0" fillId="1" borderId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="3" borderId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="4" borderId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="5" borderId="0" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="6" borderId="0" applyFill="1"/>
+  </cellXfs>
+</styleSheet>`;
+
+      // Build sharedStrings.xml
+      let sharedStrings = [];
+      let sharedStringXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="0" uniqueCount="0">`;
+
+      function getSharedIndex(text) {
+        let index = sharedStrings.indexOf(text);
+        if (index === -1) {
+          sharedStrings.push(text);
+          index = sharedStrings.length - 1;
+        }
+        return index;
+      }
+
+      // Build Sheet1.xml
+      let sheetRows = "";
+      const sheet = data[sheetNames[0]];
+      
+      // Add headers
+      let headerRow = "<row r=\"1\">";
+      sheet.headers.forEach((h, idx) => {
+        const cellRef = String.fromCharCode(65 + idx) + "1";
+        // Check if header has color
+        let style = "0";
+        const fillClass = classifyFill(h.fill);
+        if (fillClass === 'ok') style = "2";
+        else if (fillClass === 'failed') style = "3";
+        else if (fillClass === 'notresp') style = "4";
+        else if (fillClass === 'hang') style = "5";
+        else if (fillClass === 'flicker') style = "6";
+        
+        const text = h.value !== null ? h.value : "";
+        const sharedIdx = getSharedIndex(text);
+        headerRow += `<c r="${cellRef}" t="s" s="${style}"><v>${sharedIdx}</v></c>`;
+      });
+      headerRow += "</row>";
+      sheetRows += headerRow;
+      
+      // Add data rows
+      sheet.rows.forEach((row, rowIdx) => {
+        let rowXml = `<row r="${rowIdx + 2}">`;
+        row.cells.forEach((cell, colIdx) => {
+          const cellRef = String.fromCharCode(65 + colIdx) + (rowIdx + 2);
+          let style = "0";
+          const fillClass = classifyFill(cell.fill);
+          if (fillClass === 'ok') style = "2";
+          else if (fillClass === 'failed') style = "3";
+          else if (fillClass === 'notresp') style = "4";
+          else if (fillClass === 'hang') style = "5";
+          else if (fillClass === 'flicker') style = "6";
+          
+          if (row.is_results) style = "1"; // Gray for results row
+          
+          const text = cell.value !== null ? cell.value : "";
+          if (text !== "") {
+            const sharedIdx = getSharedIndex(text);
+            rowXml += `<c r="${cellRef}" t="s" s="${style}"><v>${sharedIdx}</v></c>`;
+          } else {
+            rowXml += `<c r="${cellRef}" s="${style}"/>`;
+          }
+        });
+        rowXml += "</row>";
+        sheetRows += rowXml;
+      });
+
+      const sheet1 = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>${sheetRows}</sheetData>
+</worksheet>`;
+
+      // Rebuild sharedStrings with correct count
+      sharedStringXml += sharedStrings.map(s => `<si><t>${s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</t></si>`).join("");
+      sharedStringXml += `</sst>`;
+
+      // Generate Excel file
+      zip.file('[Content_Types].xml', contentTypes);
+      zip.file('_rels/.rels', rels);
+      zip.file('xl/workbook.xml', workbook);
+      zip.file('xl/_rels/workbook.xml.rels', workbookRels);
+      zip.file('xl/styles.xml', styles);
+      zip.file('xl/sharedStrings.xml', sharedStringXml);
+      zip.file('xl/worksheets/sheet1.xml', sheet1);
+
+      zip.generateAsync({type:"blob"}).then(function(content) {
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(content);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "Museum_Check_List_Data.xlsx");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
     }
 
     function escapeHtml(str) {
