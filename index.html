@@ -166,6 +166,23 @@
     }
     .refresh-btn:hover { background: #1d4ed8; }
     
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 0.35rem;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .download-btn:hover { background: #047857; }
+    
     .table-wrap {
       flex: 1;
       min-height: 0;
@@ -195,7 +212,7 @@
       border-right: 1px solid rgba(42, 54, 73, 0.75);
       white-space: nowrap;
       min-width: 24px;
-      overflow: hidden; /* Prevents text from spilling */
+      overflow: hidden;
       text-overflow: ellipsis;
     }
     th {
@@ -237,16 +254,15 @@
     th:nth-child(1), th:nth-child(2) { background: #0d1522; z-index: 16; }
     tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: #1a2435; }
     
-    /* Results Row - MAKE SURE IT FITS IN THE COLUMN */
     tr.results-row td { 
       font-weight: 700; 
       background-color: var(--card); 
-      padding: 0.15rem 0.1rem; /* Reduce padding */
-      font-size: 0.65rem; /* Reduce font size */
+      padding: 0.15rem 0.1rem;
+      font-size: 0.65rem;
     }
     tr.results-row td:nth-child(2) { 
       text-align: left; 
-      font-size: 0.6rem; /* Smaller font for the "Results >" text */
+      font-size: 0.6rem;
     }
     
     .loading { text-align: center; padding: 2rem 1rem; color: var(--muted); }
@@ -259,7 +275,7 @@
     }
     
     @media (max-width: 700px) {
-      :root { --col-no: 22px; --col-ex: 90px; } /* Make columns smaller on mobile */
+      :root { --col-no: 22px; --col-ex: 90px; }
       header { padding: 0.2rem 0.3rem; padding-top: calc(0.2rem + env(safe-area-inset-top)); }
       main { padding: 0.2rem 0.3rem 0.7rem; height: calc(100dvh - 42px); }
       h1 { font-size: 0.95rem; }
@@ -273,15 +289,14 @@
       .summary-card .value { font-size: 0.8rem; }
       .summary-card .label { font-size: 0.5rem; }
       
-      .legend-refresh-row { gap: 0.3rem; }
+      .legend-refresh-row { gap: 0.3rem; flex-wrap: wrap; }
       .legend { font-size: 0.62rem; gap: 0.15rem 0.4rem; }
       .dot { width: 10px; height: 10px; }
-      .refresh-btn { padding: 0.35rem 0.55rem; font-size: 0.62rem; }
+      .refresh-btn, .download-btn { padding: 0.35rem 0.55rem; font-size: 0.62rem; }
       
       th, td { padding: 0.12rem 0.1rem; font-size: 0.62rem; min-width: 18px; }
       th:nth-child(3), td:nth-child(3) { min-width: 30px; max-width: 34px; }
       
-      /* Results Row mobile settings */
       tr.results-row td { font-size: 0.58rem; padding: 0.1rem 0.08rem; }
       tr.results-row td:nth-child(2) { font-size: 0.55rem; }
     }
@@ -400,7 +415,7 @@
   <main>
     <div class="summary" id="summary"></div>
     
-    <!-- Legend & Refresh Row -->
+    <!-- Legend & Buttons Row -->
     <div class="legend-refresh-row">
       <div class="legend">
         <div class="legend-item"><span class="dot" style="background:#FFC000"></span> Not Respond</div>
@@ -409,7 +424,10 @@
         <div class="legend-item"><span class="dot" style="background:#FF0000"></span> Failed</div>
         <div class="legend-item"><span class="dot" style="background:#00B050"></span> OK</div>
       </div>
-      <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+      <div style="display:flex; gap: 0.3rem;">
+        <button class="download-btn" onclick="downloadCurrentData()">⬇️ Download Data</button>
+        <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+      </div>
     </div>
     
     <div id="content" class="table-wrap">
@@ -446,6 +464,57 @@
         document.getElementById('login-pass').focus();
       }
     });
+
+    // ==========================================
+    // DOWNLOAD DATA FUNCTION (Creates CSV file)
+    // ==========================================
+    function downloadCurrentData() {
+      if (!data) {
+        alert("Data is not loaded yet!");
+        return;
+      }
+      
+      let csvContent = "";
+      
+      // Iterate through all sheets/tabs
+      const sheetNames = Object.keys(data);
+      for (let s = 0; s < sheetNames.length; s++) {
+        const sheetName = sheetNames[s];
+        const sheet = data[sheetName];
+        
+        csvContent += "\n\n=== SHEET: " + sheetName + " ===\n";
+        
+        // Headers
+        const headers = sheet.headers.map(h => h.value !== null ? h.value : "").join(",");
+        csvContent += headers + "\n";
+        
+        // Rows
+        for (let r = 0; r < sheet.rows.length; r++) {
+          const row = sheet.rows[r];
+          const rowData = row.cells.map(cell => {
+            let val = cell.value !== null ? cell.value : "";
+            // Escape commas and quotes for CSV
+            val = String(val).replace(/"/g, '""');
+            if (val.indexOf(",") > -1 || val.indexOf('"') > -1) {
+              val = '"' + val + '"';
+            }
+            return val;
+          }).join(",");
+          csvContent += rowData + "\n";
+        }
+      }
+      
+      // Create Blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "Museum_Check_List_Data.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
 
     function escapeHtml(str) {
       if (str == null) return '';
