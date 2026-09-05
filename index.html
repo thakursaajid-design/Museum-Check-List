@@ -23,13 +23,13 @@
       --col-ex: 124px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
+    html, body { height: 100%; overflow: hidden; }
     body {
       font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      height: 100vh;
-      overflow: hidden;
+      height: 100dvh; /* DYNAMIC viewport height */
+      padding-bottom: 20px; /* Ensures no clipping at the bottom */
     }
     header {
       background: #101827;
@@ -81,11 +81,10 @@
     main {
       max-width: 1760px;
       margin: 0 auto;
-      padding: 0.22rem 0.5rem 0.28rem;
+      padding: 0.22rem 0.5rem 0.5rem; /* Bottom padding fixed */
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 44px);
-      padding-bottom: 30px; /* EXTRA PADDING FOR MOBILE BAR */
+      height: calc(100dvh - 44px); /* Dynamic height */
     }
     .summary {
       display: flex;
@@ -136,7 +135,13 @@
       border-radius: 0.38rem;
       overflow: hidden;
     }
-    .table-scroll { overflow: auto; height: 100%; width: 100%; -webkit-overflow-scrolling: touch; }
+    .table-scroll { 
+      overflow: auto; 
+      height: 100%; 
+      width: 100%; 
+      -webkit-overflow-scrolling: touch; 
+      padding-bottom: 20px; /* Extra padding to ensure content is fully scrollable */
+    }
     table {
       width: max-content;
       min-width: 100%;
@@ -202,7 +207,7 @@
     @media (max-width: 700px) {
       :root { --col-no: 22px; --col-ex: 92px; }
       header { padding: 0.16rem 0.28rem; padding-top: calc(0.16rem + env(safe-area-inset-top)); }
-      main { padding: 0.16rem 0.28rem 0.2rem; height: calc(100vh - 38px); }
+      main { padding: 0.16rem 0.28rem 0.6rem; height: calc(100dvh - 38px); }
       h1 { font-size: 0.8rem; }
       .logo { width: 20px; height: 20px; font-size: 0.7rem; }
       .meta { font-size: 0.52rem; }
