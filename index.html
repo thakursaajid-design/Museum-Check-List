@@ -85,7 +85,7 @@
       height: calc(100dvh - 48px);
     }
     
-    /* Summary Layout - Number FIRST, Label SECOND, inline */
+    /* Summary Layout */
     .summary {
       display: flex;
       gap: 0.2rem;
@@ -103,8 +103,6 @@
       gap: 0.3rem;
       line-height: 1;
     }
-    
-    /* Default number and label colors (for Exhibits & Days - Light Gray) */
     .summary-card .value { font-size: 0.8rem; font-weight: 800; color: #D3D3D3; } 
     .summary-card .label {
       font-size: 0.65rem; 
@@ -114,26 +112,23 @@
       color: #A9A9A9; 
     }
     
-    /* Card colors (Specifically override for colored cards) */
+    /* Card colors */
     .summary-card.ok { background: var(--ok); color: #fff; }
-    .summary-card.ok .value { color: #ffffff; }   /* White number on Green */
-    .summary-card.ok .label { color: #e9ffe9; }   /* Light Green label */
-    
+    .summary-card.ok .value { color: #ffffff; }
+    .summary-card.ok .label { color: #e9ffe9; }
     .summary-card.fail { background: var(--fail); color: #fff; }
-    .summary-card.fail .value { color: #ffffff; } /* White number on Red */
-    .summary-card.fail .label { color: #ffeaea; } /* Light Red label */
-    
+    .summary-card.fail .value { color: #ffffff; }
+    .summary-card.fail .label { color: #ffeaea; }
     .summary-card.issues { background: var(--notresp); color: #1a1400; }
-    .summary-card.issues .value { color: #1a1400; } /* Dark number on Yellow */
-    .summary-card.issues .label { color: #5a3a00; } /* Dark Yellow/Brown label */
-    
+    .summary-card.issues .value { color: #1a1400; }
+    .summary-card.issues .label { color: #5a3a00; }
     .summary-card.today-issues {
       background: linear-gradient(135deg, #D8BFD8, #E6E6FA); 
       color: #2d1b69;
       border: 2px solid #A855F7;
     }
-    .summary-card.today-issues .value { color: #4C1D95; } /* Dark Purple number */
-    .summary-card.today-issues .label { color: #4C1D95; } /* Dark Purple label */
+    .summary-card.today-issues .value { color: #4C1D95; }
+    .summary-card.today-issues .label { color: #4C1D95; }
     
     /* Legend & Refresh Row */
     .legend-refresh-row {
@@ -200,6 +195,8 @@
       border-right: 1px solid rgba(42, 54, 73, 0.75);
       white-space: nowrap;
       min-width: 24px;
+      overflow: hidden; /* Prevents text from spilling */
+      text-overflow: ellipsis;
     }
     th {
       background: #0d1522;
@@ -239,7 +236,19 @@
     }
     th:nth-child(1), th:nth-child(2) { background: #0d1522; z-index: 16; }
     tr:hover td:nth-child(1), tr:hover td:nth-child(2) { background: #1a2435; }
-    tr.results-row td { font-weight: 600; background-color: var(--card); }
+    
+    /* Results Row - MAKE SURE IT FITS IN THE COLUMN */
+    tr.results-row td { 
+      font-weight: 700; 
+      background-color: var(--card); 
+      padding: 0.15rem 0.1rem; /* Reduce padding */
+      font-size: 0.65rem; /* Reduce font size */
+    }
+    tr.results-row td:nth-child(2) { 
+      text-align: left; 
+      font-size: 0.6rem; /* Smaller font for the "Results >" text */
+    }
+    
     .loading { text-align: center; padding: 2rem 1rem; color: var(--muted); }
     .error {
       background: rgba(239, 68, 68, 0.12);
@@ -250,7 +259,7 @@
     }
     
     @media (max-width: 700px) {
-      :root { --col-no: 24px; --col-ex: 100px; }
+      :root { --col-no: 22px; --col-ex: 90px; } /* Make columns smaller on mobile */
       header { padding: 0.2rem 0.3rem; padding-top: calc(0.2rem + env(safe-area-inset-top)); }
       main { padding: 0.2rem 0.3rem 0.7rem; height: calc(100dvh - 42px); }
       h1 { font-size: 0.95rem; }
@@ -259,18 +268,22 @@
       .tabs { width: 100%; }
       .tab { padding: 0.2rem 0.5rem; font-size: 0.72rem; }
       
-      /* MOBILE SUMMARY CARD SETTINGS - CHANGE HERE FOR PHONE */
       .summary { gap: 0.15rem; }
       .summary-card { padding: 0.1rem 0.3rem; }
-      .summary-card .value { font-size: 0.8rem; } /* Changed to 0.8rem for phone */
+      .summary-card .value { font-size: 0.8rem; }
       .summary-card .label { font-size: 0.5rem; }
       
       .legend-refresh-row { gap: 0.3rem; }
       .legend { font-size: 0.62rem; gap: 0.15rem 0.4rem; }
       .dot { width: 10px; height: 10px; }
       .refresh-btn { padding: 0.35rem 0.55rem; font-size: 0.62rem; }
-      th, td { padding: 0.12rem 0.12rem; font-size: 0.62rem; min-width: 20px; }
-      th:nth-child(3), td:nth-child(3) { min-width: 32px; max-width: 36px; }
+      
+      th, td { padding: 0.12rem 0.1rem; font-size: 0.62rem; min-width: 18px; }
+      th:nth-child(3), td:nth-child(3) { min-width: 30px; max-width: 34px; }
+      
+      /* Results Row mobile settings */
+      tr.results-row td { font-size: 0.58rem; padding: 0.1rem 0.08rem; }
+      tr.results-row td:nth-child(2) { font-size: 0.55rem; }
     }
     
     /* Login styles */
